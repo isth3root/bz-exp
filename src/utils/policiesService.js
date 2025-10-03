@@ -29,8 +29,6 @@ class PoliciesService {
       const endDate = new Date(policy.end_date);
       if (endDate < now) {
         status = 'منقضی';
-      } else if ((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30) <= 1) {
-        status = 'نزدیک انقضا';
       }
     }
 
@@ -56,7 +54,8 @@ class PoliciesService {
 
       for (let i = 1; i <= policy.installment_count; i++) {
         const dueDate = new Date(startDate);
-        dueDate.setMonth(startDate.getMonth() + i - 1);
+        dueDate.setMonth(startDate.getMonth() + i);
+        dueDate.setDate(1);
 
         await installmentsService.create({
           customer_id: policyWithRelations.customer.id,
@@ -125,12 +124,11 @@ class PoliciesService {
         const startDate = policy.start_date ? new Date(policy.start_date) : new Date();
         for (let i = 1; i <= policy.installment_count; i++) {
           const dueDate = new Date(startDate);
-          dueDate.setMonth(startDate.getMonth() + i - 1);
+          dueDate.setMonth(startDate.getMonth() + i);
+          dueDate.setDate(1);
           let status = 'آینده';
           if (dueDate < now) {
             status = 'معوق';
-          } else if ((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30) <= 1) {
-            status = 'نزدیک انقضا';
           }
           allInstallments.push({
             id: `${policy.id}-${i}`,
