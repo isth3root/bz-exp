@@ -142,7 +142,8 @@ class PoliciesService {
         const startDate = policy.start_date ? new Date(policy.start_date) : new Date();
         for (let i = 1; i <= policy.installment_count; i++) {
           const dueDate = new Date(startDate);
-          dueDate.setMonth(startDate.getMonth() + i - 1);
+          dueDate.setMonth(startDate.getMonth() + i);
+          dueDate.setDate(1);
           let status = 'آینده';
           if (dueDate < now) {
             status = 'معوق';
