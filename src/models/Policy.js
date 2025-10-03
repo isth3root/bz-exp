@@ -16,7 +16,7 @@ const Policy = new EntitySchema({
     },
     insurance_type: {
       type: 'enum',
-      enum: ['ثالث', 'بدنه', 'آتش‌سوزی', 'حوادث'],
+      enum: ['ثالث', 'بدنه', 'آتش‌سوزی', 'حوادث', 'مسئولیت', 'زندگی'],
       nullable: true,
     },
     details: {
@@ -61,9 +61,14 @@ const Policy = new EntitySchema({
       length: 255,
       nullable: true,
     },
+    policy_number: {
+      type: 'varchar',
+      length: 50,
+      nullable: true,
+    },
     status: {
       type: 'enum',
-      enum: ['فعال', 'نزدیک انقضا', 'معوق', 'منقضی'],
+      enum: ['فعال', 'نزدیک انقضا', 'منقضی'],
       default: 'فعال',
     },
     created_at: {

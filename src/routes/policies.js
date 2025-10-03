@@ -4,6 +4,11 @@ import multer from 'multer';
 const upload = multer({ dest: 'uploads/policies/' });
 import { jwtAuth } from '../middleware/auth.js';
 import policiesService from '../utils/policiesService.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 router.get('/admin/policies', jwtAuth, async (req, res) => {
   try {
@@ -18,7 +23,7 @@ router.post('/admin/policies', jwtAuth, upload.single('pdf'), async (req, res) =
   try {
     const policy = req.body;
     if (req.file) {
-      policy.pdf_path = `/uploads/policies/${policy.customer_national_code}/${req.file.filename}`;
+      policy.pdf_path = `/uploads/policies/${req.file.filename}`;
     }
     const newPolicy = await policiesService.create(policy);
     res.json(newPolicy);
@@ -86,7 +91,24 @@ router.get('/customer/policies/:id/download', jwtAuth, async (req, res) => {
   try {
     const policy = await policiesService.findOne(req.params.id);
     if (policy && policy.pdf_path) {
-      res.sendFile(policy.pdf_path, { root: '.' });
+      let filePath = path.join(__dirname, '..', '..', policy.pdf_path.substring(1));
+      if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+      } else {
+        // Try without national_code subfolder for legacy paths
+        const parts = policy.pdf_path.split('/');
+        if (parts.length >= 4) {
+          const filename = parts[parts.length - 1];
+          const altPath = path.join(__dirname, '..', '..', 'uploads', 'policies', filename);
+          if (fs.existsSync(altPath)) {
+            res.sendFile(altPath);
+          } else {
+            res.status(404).send('File not found');
+          }
+        } else {
+          res.status(404).send('File not found');
+        }
+      }
     } else {
       res.status(404).send('File not found');
     }

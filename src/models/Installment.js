@@ -30,7 +30,7 @@ const Installment = new EntitySchema({
     },
     status: {
       type: 'enum',
-      enum: ['معوق', 'نزدیک انقضا', 'آینده', 'پرداخت شده'],
+      enum: ['معوق', 'آینده', 'پرداخت شده'],
     },
     pay_link: {
       type: 'varchar',
