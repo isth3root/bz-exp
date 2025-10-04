@@ -26,6 +26,18 @@ class BlogsService {
 
   async remove(id) {
     const blogRepository = dataSource.getRepository(Blog);
+    const blog = await blogRepository.findOneBy({ id });
+
+    // Delete associated image file if exists
+    if (blog && blog.image_path) {
+      const fs = await import('fs');
+      const path = await import('path');
+      const filePath = path.join(process.cwd(), blog.image_path.substring(1));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
     await blogRepository.delete(id);
   }
 }

@@ -52,8 +52,48 @@ class CustomersService {
   async remove(id) {
     console.log('Service remove id:', id);
     const customerRepository = dataSource.getRepository(Customer);
+    const policyRepository = dataSource.getRepository(Policy);
+
+    // Find the customer to get national_code
+    const customer = await customerRepository.findOne({ where: { id } });
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    // Find all policies for this customer
+    const policies = await policyRepository.find({ where: { customer_national_code: customer.national_code } });
+
+    // Delete each policy (which will also delete installments and PDF files)
+    for (const policy of policies) {
+      await this.removePolicyAndRelated(policy.id);
+    }
+
+    // Delete the customer
     const deleteResult = await customerRepository.delete(id);
     console.log('Delete result:', deleteResult);
+  }
+
+  async removePolicyAndRelated(policyId) {
+    const policyRepository = dataSource.getRepository(Policy);
+    const installmentsService = (await import('./installmentsService.js')).default;
+
+    const policy = await policyRepository.findOne({ where: { id: policyId } });
+
+    // Delete associated PDF file if exists
+    if (policy && policy.pdf_path) {
+      const fs = await import('fs');
+      const path = await import('path');
+      const filePath = path.join(process.cwd(), policy.pdf_path.substring(1));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Delete associated installments
+    await installmentsService.removeByPolicyId(policyId);
+
+    // Delete the policy
+    await policyRepository.delete(policyId);
   }
 
   async getCount() {

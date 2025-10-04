@@ -21,6 +21,7 @@ const __dirname = path.dirname(__filename);
 const allowedOrigins = [
   'https://www.bimerz.ir',
   'https://bimerz.ir',
+  'http://localhost:5173'
 ];
 
 const app = express();

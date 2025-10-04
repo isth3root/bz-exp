@@ -51,7 +51,25 @@ class PoliciesService {
 
   async findByCustomerNationalCode(nationalCode) {
     const policyRepository = dataSource.getRepository(Policy);
-    return policyRepository.find({ where: { customer_national_code: nationalCode }, relations: ['customer'] });
+    const policies = await policyRepository.find({ where: { customer_national_code: nationalCode }, relations: ['customer'] });
+    const now = new Date();
+    const oneMonthFromNow = new Date();
+    oneMonthFromNow.setMonth(now.getMonth() + 1);
+
+    return policies.map(policy => {
+      let status = policy.status;
+      if (policy.end_date) {
+        const [jy, jm, jd] = policy.end_date.split('/').map(Number);
+        const gregorian = jalaali.toGregorian(jy, jm, jd);
+        const endDate = new Date(gregorian.gy, gregorian.gm - 1, gregorian.gd);
+        if (endDate < now) {
+          status = 'منقضی';
+        } else if (endDate <= oneMonthFromNow) {
+          status = 'نزدیک انقضا';
+        }
+      }
+      return { ...policy, status };
+    });
   }
 
   async create(policy) {
@@ -141,10 +159,22 @@ class PoliciesService {
   }
 
   async remove(id) {
+    const policyRepository = dataSource.getRepository(Policy);
+    const policy = await policyRepository.findOne({ where: { id } });
+
+    // Delete associated PDF file if exists
+    if (policy && policy.pdf_path) {
+      const fs = await import('fs');
+      const path = await import('path');
+      const filePath = path.join(process.cwd(), policy.pdf_path.substring(1));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
     // First delete all associated installments
     await installmentsService.removeByPolicyId(id);
     // Then delete the policy
-    const policyRepository = dataSource.getRepository(Policy);
     await policyRepository.delete(id);
   }
 
