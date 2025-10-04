@@ -24,11 +24,13 @@ const Policy = new EntitySchema({
       nullable: true,
     },
     start_date: {
-      type: 'date',
+      type: 'varchar',
+      length: 10,
       nullable: true,
     },
     end_date: {
-      type: 'date',
+      type: 'varchar',
+      length: 10,
       nullable: true,
     },
     premium: {

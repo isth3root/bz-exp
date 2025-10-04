@@ -26,7 +26,8 @@ const Installment = new EntitySchema({
       scale: 2,
     },
     due_date: {
-      type: 'date',
+      type: 'varchar',
+      length: 10,
     },
     status: {
       type: 'enum',

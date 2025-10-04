@@ -1,6 +1,7 @@
 import { LessThan, Between, Not } from 'typeorm';
 import dataSource from '../config/database.js';
 import Installment from '../models/Installment.js';
+import jalaali from "jalaali-js";
 
 class InstallmentsService {
   async findAll() {
@@ -52,28 +53,33 @@ class InstallmentsService {
 
   async getOverdueCount() {
     const installmentRepository = dataSource.getRepository(Installment);
-    const now = new Date();
-    const count = await installmentRepository.count({
-      where: {
-        status: 'معوق',
-        due_date: LessThan(now),
-      },
+    const installments = await installmentRepository.find({
+      where: { status: 'معوق' },
     });
-    return count;
+    const now = new Date();
+    return installments.filter(inst => {
+      const [jy, jm, jd] = inst.due_date.split('/').map(Number);
+      const gregorian = jalaali.toGregorian(jy, jm, jd);
+      const dueDate = new Date(gregorian.gy, gregorian.gm - 1, gregorian.gd);
+      return dueDate < now;
+    }).length;
   }
 
   async getNearExpiryCount() {
     const installmentRepository = dataSource.getRepository(Installment);
+    const installments = await installmentRepository.find({
+      where: { status: Not('پرداخت شده') },
+    });
     const now = new Date();
     const oneMonthFromNow = new Date();
     oneMonthFromNow.setMonth(now.getMonth() + 1);
 
-    return installmentRepository.count({
-      where: {
-        due_date: Between(now, oneMonthFromNow),
-        status: Not('پرداخت شده'),
-      },
-    });
+    return installments.filter(inst => {
+      const [jy, jm, jd] = inst.due_date.split('/').map(Number);
+      const gregorian = jalaali.toGregorian(jy, jm, jd);
+      const dueDate = new Date(gregorian.gy, gregorian.gm - 1, gregorian.gd);
+      return dueDate >= now && dueDate <= oneMonthFromNow;
+    }).length;
   }
 }
 

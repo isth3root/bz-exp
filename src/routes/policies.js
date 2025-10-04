@@ -21,13 +21,20 @@ router.get('/admin/policies', jwtAuth, async (req, res) => {
 
 router.post('/admin/policies', jwtAuth, upload.single('pdf'), async (req, res) => {
   try {
-    const policy = req.body;
+    const policy = {
+      ...req.body,
+      start_date: String(req.body.start_date),
+      end_date: String(req.body.end_date),
+    };
+
     if (req.file) {
       policy.pdf_path = `/uploads/policies/${req.file.filename}`;
     }
+
     const newPolicy = await policiesService.create(policy);
     res.json(newPolicy);
   } catch (error) {
+    console.error("Error creating policy", error)
     res.status(500).json({ message: 'Error creating policy' });
   }
 });
