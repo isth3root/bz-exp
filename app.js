@@ -18,6 +18,11 @@ import policiesRoutes from './src/routes/policies.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const allowedOrigins = [
+  'https://www.bimerz.ir',
+  'https://bimerz.ir',
+];
+
 const app = express();
 
 // Middleware
@@ -26,7 +31,14 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({
-  origin: ['https://www.bimerz.ir', 'https://bimerz.ir', 'http://localhost:3000', 'http://localhost:5173'],
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
