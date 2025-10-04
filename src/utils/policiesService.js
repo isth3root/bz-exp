@@ -95,7 +95,7 @@ class PoliciesService {
       if (!sy || !sm || !sd) throw new Error("Invalid start_date format")
       if (sy < 1300) sy += 620;
 
-      for (let i = 1; i <= policy.installment_count; i++) {
+      for (let i = 0; i < policy.installment_count; i++) {
         let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, i);
 
         // due_date as Jalaali string
@@ -112,7 +112,7 @@ class PoliciesService {
         await installmentsService.create({
           customer_id: policyWithRelations.customer.id,
           policy_id: policyWithRelations.id,
-          installment_number: i,
+          installment_number: i + 1,
           amount: installmentAmount,
           due_date,
           status,
@@ -187,8 +187,8 @@ class PoliciesService {
           startDay = nowJalaali.jd;
         }
 
-        for (let i = 1; i <= policy.installment_count; i++) {
-          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, i); // First installment 1 month after start
+        for (let i = 0; i < policy.installment_count; i++) {
+          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, i); // First installment at start date
           const due_date = `${dueDateJalaali.y}/${String(dueDateJalaali.m).padStart(2, "0")}/${String(dueDateJalaali.d).padStart(2, "0")}`;
 
           // Convert Jalaali to Gregorian for status check
@@ -199,7 +199,7 @@ class PoliciesService {
             status = 'معوق';
           }
           allInstallments.push({
-            id: `${policy.id}-${i}`,
+            id: `${policy.id}-${i + 1}`,
             customerName: policy.customer ? policy.customer.full_name : 'Unknown',
             customerNationalCode: policy.customer ? policy.customer.national_code : '',
             policyType: policy.insurance_type,
@@ -207,7 +207,7 @@ class PoliciesService {
             dueDate: due_date, // Jalaali format
             status,
             policyId: policy.id,
-            installmentNumber: i,
+            installmentNumber: i + 1,
           });
         }
       }
