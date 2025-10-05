@@ -17,7 +17,7 @@ const Policy = new EntitySchema({
     insurance_type: {
       type: 'enum',
       enum: ['ثالث', 'بدنه', 'آتش‌سوزی', 'حوادث', 'مسئولیت', 'زندگی'],
-      nullable: true,
+      nullable: false,
     },
     details: {
       type: 'text',
@@ -26,7 +26,7 @@ const Policy = new EntitySchema({
     start_date: {
       type: 'varchar',
       length: 10,
-      nullable: true,
+      nullable: false,
     },
     end_date: {
       type: 'varchar',
@@ -37,21 +37,21 @@ const Policy = new EntitySchema({
       type: 'decimal',
       precision: 20,
       scale: 2,
-      nullable: true,
+      nullable: false,
     },
     payment_type: {
       type: 'enum',
       enum: ['نقدی', 'اقساطی'],
-      nullable: true,
+      nullable: false,
     },
     installment_count: {
       type: 'int',
-      nullable: true,
+      nullable: false,
     },
     installment_type: {
       type: 'enum',
       enum: ['تمام قسط', 'پیش پرداخت'],
-      nullable: true,
+      nullable: false,
     },
     first_installment_amount: {
       type: 'decimal',

@@ -122,7 +122,8 @@ class PoliciesService {
       if (sy < 1300) sy += 620;
 
       for (let i = 0; i < policy.installment_count; i++) {
-        let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, i + 1);
+        const monthsToAdd = policy.installment_type === 'پیش پرداخت' ? i : i + 1;
+        let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
 
         // due_date as Jalaali string
         let due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
@@ -238,7 +239,8 @@ class PoliciesService {
         }
 
         for (let i = 0; i < policy.installment_count; i++) {
-          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, i + 1); // First installment one month after start date
+          const monthsToAdd = policy.installment_type === 'پیش پرداخت' ? i : i + 1;
+          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, monthsToAdd);
           const due_date = `${dueDateJalaali.y}/${String(dueDateJalaali.m).padStart(2, "0")}/${String(dueDateJalaali.d).padStart(2, "0")}`;
 
           // Convert Jalaali to Gregorian for status check
