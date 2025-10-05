@@ -37,8 +37,13 @@ const Customer = new EntitySchema({
     },
     role: {
       type: 'enum',
-      enum: ['customer', 'admin'],
+      enum: ['customer', 'admin', 'admin-2', 'admin-3'],
       default: 'customer',
+    },
+    status: {
+      type: 'enum',
+      enum: ['فعال', 'غیرفعال'],
+      default: 'فعال',
     },
     created_at: {
       type: 'timestamp',
