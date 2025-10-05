@@ -108,13 +108,21 @@ class PoliciesService {
 
     // Create installments if payment type is اقساطی
     if (policy.payment_type === 'اقساطی' && policy.installment_count && policy.installment_count > 0 && policyWithRelations.premium) {
-      const installmentAmount = policyWithRelations.premium / policy.installment_count;
+      let installmentAmount;
+      if (policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount) {
+        // For prepayment: (premium - first_installment) / (installments_count - 1)
+        installmentAmount = (policyWithRelations.premium - policy.first_installment_amount) / (policy.installment_count - 1);
+      } else {
+        // For regular: premium / installments_count
+        installmentAmount = policyWithRelations.premium / policy.installment_count;
+      }
+
       let [sy, sm, sd] = policyWithRelations.start_date.split("/").map(Number);
       if (!sy || !sm || !sd) throw new Error("Invalid start_date format")
       if (sy < 1300) sy += 620;
 
       for (let i = 0; i < policy.installment_count; i++) {
-        let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, i);
+        let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, i + 1);
 
         // due_date as Jalaali string
         let due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
@@ -127,11 +135,17 @@ class PoliciesService {
           status = "معوق";
         }
 
+        // For prepayment, first installment is the specified amount
+        let amount = installmentAmount;
+        if (policy.installment_type === 'پیش پرداخت' && i === 0 && policy.first_installment_amount) {
+          amount = policy.first_installment_amount;
+        }
+
         await installmentsService.create({
           customer_id: policyWithRelations.customer.id,
           policy_id: policyWithRelations.id,
           installment_number: i + 1,
-          amount: installmentAmount,
+          amount,
           due_date,
           status,
           pay_link: policyWithRelations.payment_link,
@@ -205,7 +219,13 @@ class PoliciesService {
     const now = new Date();
     for (const policy of policies) {
       if (policy.payment_type === 'اقساطی' && policy.installment_count && policy.installment_count > 0 && policy.premium) {
-        const installmentAmount = policy.premium / policy.installment_count;
+        let installmentAmount;
+        if (policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount) {
+          installmentAmount = (policy.premium - policy.first_installment_amount) / (policy.installment_count - 1);
+        } else {
+          installmentAmount = policy.premium / policy.installment_count;
+        }
+
         let [startYear, startMonth, startDay] = [0, 0, 0];
         if (policy.start_date) {
           [startYear, startMonth, startDay] = policy.start_date.split('/').map(Number);
@@ -218,7 +238,7 @@ class PoliciesService {
         }
 
         for (let i = 0; i < policy.installment_count; i++) {
-          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, i); // First installment at start date
+          const dueDateJalaali = addJalaaliMonth({ y: startYear, m: startMonth, d: startDay }, i + 1); // First installment one month after start date
           const due_date = `${dueDateJalaali.y}/${String(dueDateJalaali.m).padStart(2, "0")}/${String(dueDateJalaali.d).padStart(2, "0")}`;
 
           // Convert Jalaali to Gregorian for status check
@@ -228,12 +248,18 @@ class PoliciesService {
           if (dueDateGregorian < now) {
             status = 'معوق';
           }
+
+          let amount = installmentAmount;
+          if (policy.installment_type === 'پیش پرداخت' && i === 0 && policy.first_installment_amount) {
+            amount = policy.first_installment_amount;
+          }
+
           allInstallments.push({
             id: `${policy.id}-${i + 1}`,
             customerName: policy.customer ? policy.customer.full_name : 'Unknown',
             customerNationalCode: policy.customer ? policy.customer.national_code : '',
             policyType: policy.insurance_type,
-            amount: installmentAmount.toString(),
+            amount: amount.toString(),
             dueDate: due_date, // Jalaali format
             status,
             policyId: policy.id,

@@ -48,6 +48,17 @@ const Policy = new EntitySchema({
       type: 'int',
       nullable: true,
     },
+    installment_type: {
+      type: 'enum',
+      enum: ['تمام قسط', 'پیش پرداخت'],
+      nullable: true,
+    },
+    first_installment_amount: {
+      type: 'decimal',
+      precision: 20,
+      scale: 2,
+      nullable: true,
+    },
     payment_id: {
       type: 'varchar',
       length: 50,
