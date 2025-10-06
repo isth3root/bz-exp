@@ -22,6 +22,7 @@ const Blog = new EntitySchema({
     category: {
       type: 'varchar',
       length: 100,
+      nullable: true,
     },
     image_path: {
       type: 'varchar',
