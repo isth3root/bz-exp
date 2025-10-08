@@ -1,4 +1,4 @@
-import { LessThan, Between, Not } from 'typeorm';
+import { LessThan, Between, Not, MoreThan } from 'typeorm';
 import dataSource from '../config/database.js';
 import Installment from '../models/Installment.js';
 import jalaali from "jalaali-js";
@@ -37,7 +37,63 @@ class InstallmentsService {
 
   async update(id, installment) {
     const installmentRepository = dataSource.getRepository(Installment);
+
+    // Get the current installment before update
+    const currentInstallment = await this.findOne(id);
+    if (!currentInstallment) {
+      throw new Error('Installment not found');
+    }
+
+    const oldAmount = parseFloat(currentInstallment.amount);
+    const newAmount = parseFloat(installment.amount);
+    const difference = newAmount - oldAmount;
+
+    // If amount increased, set status to paid and subtract the difference from subsequent installments
+    if (difference > 0) {
+      installment.status = 'پرداخت شده';
+    }
+
+    // Update the current installment
     await installmentRepository.update(id, installment);
+
+    // If amount increased, subtract the difference from subsequent installments
+    if (difference > 0) {
+      let remainingDifference = difference;
+
+      // Find subsequent installments for the same policy, ordered by installment_number
+      const subsequentInstallments = await installmentRepository.find({
+        where: {
+          policy_id: currentInstallment.policy_id,
+          installment_number: MoreThan(currentInstallment.installment_number)
+        },
+        order: {
+          installment_number: 'ASC'
+        }
+      });
+
+      for (const subInst of subsequentInstallments) {
+        if (remainingDifference <= 0) break;
+
+        const subAmount = parseFloat(subInst.amount);
+        const newSubAmount = subAmount - remainingDifference;
+
+        if (newSubAmount <= 0) {
+          // Set to paid and continue with remaining difference
+          await installmentRepository.update(subInst.id, {
+            amount: 0,
+            status: 'پرداخت شده'
+          });
+          remainingDifference = -newSubAmount; // remaining difference becomes positive again
+        } else {
+          // Just subtract the difference
+          await installmentRepository.update(subInst.id, {
+            amount: newSubAmount
+          });
+          remainingDifference = 0;
+        }
+      }
+    }
+
     return this.findOne(id);
   }
 
