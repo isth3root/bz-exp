@@ -108,13 +108,17 @@ class PoliciesService {
 
     // Create installments if payment type is اقساطی
     if (policy.payment_type === 'اقساطی' && policy.installment_count && policy.installment_count > 0 && policyWithRelations.premium) {
-      let installmentAmount;
+      let baseAmount, remainder, total, count;
       if (policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount) {
-        // For prepayment: (premium - first_installment) / (installments_count - 1)
-        installmentAmount = (policyWithRelations.premium - policy.first_installment_amount) / (policy.installment_count - 1);
+        total = policyWithRelations.premium - policy.first_installment_amount;
+        count = policy.installment_count - 1;
+        baseAmount = Math.floor(total / count);
+        remainder = total % count;
       } else {
-        // For regular: premium / installments_count
-        installmentAmount = policyWithRelations.premium / policy.installment_count;
+        total = policyWithRelations.premium;
+        count = policy.installment_count;
+        baseAmount = Math.floor(total / count);
+        remainder = total % count;
       }
 
       let [sy, sm, sd] = policyWithRelations.start_date.split("/").map(Number);
@@ -136,10 +140,12 @@ class PoliciesService {
           status = "معوق";
         }
 
-        // For prepayment, first installment is the specified amount
-        let amount = installmentAmount;
+        // Calculate amount without decimals, add remainder to the last installment
+        let amount;
         if (policy.installment_type === 'پیش پرداخت' && i === 0 && policy.first_installment_amount) {
           amount = policy.first_installment_amount;
+        } else {
+          amount = baseAmount + (i === policy.installment_count - 1 ? remainder : 0);
         }
 
         await installmentsService.create({
@@ -159,8 +165,76 @@ class PoliciesService {
 
   async update(id, policy) {
     const policyRepository = dataSource.getRepository(Policy);
+
+    const oldPolicy = await this.findOne(id);
+    if (!oldPolicy) return null;
+
     await policyRepository.update(id, policy);
     const updatedPolicy = await this.findOne(id);
+
+    // Check if premium, first_installment_amount, or installment_count changed
+    const premiumChanged = parseFloat(policy.premium) !== oldPolicy.premium;
+    const newFirstInstallment = policy.first_installment_amount ? parseFloat(policy.first_installment_amount) : null;
+    const oldFirstInstallment = oldPolicy.first_installment_amount;
+    const firstInstallmentChanged = newFirstInstallment !== oldFirstInstallment;
+    const installmentCountChanged = parseInt(policy.installment_count) !== oldPolicy.installment_count;
+
+    if (premiumChanged || firstInstallmentChanged || installmentCountChanged) {
+      // Recalculate installments
+      // First, delete existing installments
+      await installmentsService.removeByPolicyId(id);
+
+      // Then, create new ones if payment_type is اقساطی
+      if (updatedPolicy.payment_type === 'اقساطی' && updatedPolicy.installment_count && updatedPolicy.installment_count > 0 && updatedPolicy.premium) {
+        let baseAmount, remainder, total, count;
+        if (updatedPolicy.installment_type === 'پیش پرداخت' && updatedPolicy.first_installment_amount) {
+          total = updatedPolicy.premium - updatedPolicy.first_installment_amount;
+          count = updatedPolicy.installment_count - 1;
+          baseAmount = Math.floor(total / count);
+          remainder = total % count;
+        } else {
+          total = updatedPolicy.premium;
+          count = updatedPolicy.installment_count;
+          baseAmount = Math.floor(total / count);
+          remainder = total % count;
+        }
+
+        let [sy, sm, sd] = updatedPolicy.start_date.split("/").map(Number);
+        if (!sy || !sm || !sd) throw new Error("Invalid start_date format")
+        if (sy < 1300) sy += 620;
+
+        for (let i = 0; i < updatedPolicy.installment_count; i++) {
+          const monthsToAdd = updatedPolicy.installment_type === 'پیش پرداخت' ? i : i + 1;
+          let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
+
+          let due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+
+          const now = new Date();
+          const nowJalaali = jalaali.toJalaali(now);
+          let status = "آینده";
+          if (y < nowJalaali.jy || (y === nowJalaali.jy && m < nowJalaali.jm) || (y === nowJalaali.jy && m === nowJalaali.jm && d < nowJalaali.jd)) {
+            status = "معوق";
+          }
+
+          let amount;
+          if (updatedPolicy.installment_type === 'پیش پرداخت' && i === 0 && updatedPolicy.first_installment_amount) {
+            amount = updatedPolicy.first_installment_amount;
+          } else {
+            amount = baseAmount + (i === updatedPolicy.installment_count - 1 ? remainder : 0);
+          }
+
+          await installmentsService.create({
+            customer_id: updatedPolicy.customer.id,
+            policy_id: updatedPolicy.id,
+            installment_number: i + 1,
+            amount,
+            due_date,
+            status,
+            pay_link: updatedPolicy.payment_link,
+          });
+        }
+      }
+    }
 
     if (updatedPolicy && policy.payment_link) {
       const installments = await installmentsService.findByPolicyId(id);
@@ -220,11 +294,17 @@ class PoliciesService {
     const now = new Date();
     for (const policy of policies) {
       if (policy.payment_type === 'اقساطی' && policy.installment_count && policy.installment_count > 0 && policy.premium) {
-        let installmentAmount;
+        let baseAmount, remainder, total, count;
         if (policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount) {
-          installmentAmount = (policy.premium - policy.first_installment_amount) / (policy.installment_count - 1);
+          total = policy.premium - policy.first_installment_amount;
+          count = policy.installment_count - 1;
+          baseAmount = Math.floor(total / count);
+          remainder = total % count;
         } else {
-          installmentAmount = policy.premium / policy.installment_count;
+          total = policy.premium;
+          count = policy.installment_count;
+          baseAmount = Math.floor(total / count);
+          remainder = total % count;
         }
 
         let [startYear, startMonth, startDay] = [0, 0, 0];
@@ -251,9 +331,11 @@ class PoliciesService {
             status = 'معوق';
           }
 
-          let amount = installmentAmount;
+          let amount;
           if (policy.installment_type === 'پیش پرداخت' && i === 0 && policy.first_installment_amount) {
             amount = policy.first_installment_amount;
+          } else {
+            amount = baseAmount + (i === policy.installment_count - 1 ? remainder : 0);
           }
 
           allInstallments.push({
