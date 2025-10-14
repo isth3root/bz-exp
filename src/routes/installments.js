@@ -3,7 +3,7 @@ const router = express.Router();
 import { jwtAuth } from '../middleware/auth.js';
 import installmentsService from '../utils/installmentsService.js';
 
-router.get('/installments/admin', jwtAuth, async (req, res) => {
+router.get('/admin/installments', jwtAuth, async (req, res) => {
   try {
     const installments = await installmentsService.findAll();
     res.json(installments);

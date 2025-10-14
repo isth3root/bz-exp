@@ -72,8 +72,22 @@ class PoliciesService {
     });
   }
 
+  async findByCustomerId(customerId) {
+    const customerRepository = dataSource.getRepository(Customer);
+    const customer = await customerRepository.findOne({ where: { id: customerId } });
+    if (!customer) return [];
+    return this.findByCustomerNationalCode(customer.national_code);
+  }
+
   async create(policy) {
     const policyRepository = dataSource.getRepository(Policy);
+
+    // Calculate end_date if not provided
+    if (!policy.end_date || policy.end_date.trim() === '') {
+      const [jy, jm, jd] = policy.start_date.split('/').map(Number);
+      const newJy = jy + 1;
+      policy.end_date = `${newJy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
+    }
 
     // Calculate status based on dates if not provided
     let status = policy.status || 'فعال';

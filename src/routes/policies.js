@@ -24,7 +24,7 @@ router.post('/admin/policies', jwtAuth, upload.single('pdf'), async (req, res) =
     const policy = {
       ...req.body,
       start_date: String(req.body.start_date),
-      end_date: String(req.body.end_date),
+      end_date: req.body.end_date ? String(req.body.end_date) : null,
     };
 
     if (req.file) {
@@ -69,7 +69,7 @@ router.delete('/admin/policies/:id', jwtAuth, async (req, res) => {
 
 router.get('/admin/installments', jwtAuth, async (req, res) => {
   try {
-    const installments = await policiesService.getAllInstallments();
+    const installments = await installmentsService.findAll();
     res.json(installments);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching installments' });
