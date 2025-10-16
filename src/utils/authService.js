@@ -3,6 +3,19 @@ import dataSource from '../config/database.js';
 import Customer from '../models/Customer.js';
 
 class AuthService {
+  getJwtSecret(role) {
+    switch (role) {
+      case 'admin':
+        return process.env.JWT_SECRET_ADMIN;
+      case 'admin-2':
+        return process.env.JWT_SECRET_ADMIN2;
+      case 'admin-3':
+        return process.env.JWT_SECRET_ADMIN3;
+      default:
+        return process.env.JWT_SECRET_CUSTOMERS;
+    }
+  }
+
   async validateCustomer(username, password) {
     const customerRepository = dataSource.getRepository(Customer);
     const customer = await customerRepository.findOne({
@@ -19,9 +32,11 @@ class AuthService {
   }
 
   async login(customer) {
+    const secret = this.getJwtSecret(customer.role);
+    const expiresIn = customer.role === 'admin' ? '15d' : '30d';
     const payload = { username: customer.national_code, sub: customer.id, role: customer.role };
     return {
-      access_token: jwt.sign(payload, process.env.JWT_SECRET || 'secretKey'),
+      access_token: jwt.sign(payload, secret, { expiresIn }),
       userId: customer.id,
       username: customer.national_code,
       role: customer.role,

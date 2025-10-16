@@ -45,6 +45,11 @@ const Customer = new EntitySchema({
       enum: ['فعال', 'غیرفعال'],
       default: 'فعال',
     },
+    two_factor_secret: {
+      type: 'varchar',
+      length: 255,
+      nullable: true,
+    },
     created_at: {
       type: 'timestamp',
       createDate: true,
