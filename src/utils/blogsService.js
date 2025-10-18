@@ -40,6 +40,12 @@ class BlogsService {
 
     await blogRepository.delete(id);
   }
+
+  async existsByTitle(title) {
+    const blogRepository = dataSource.getRepository(Blog);
+    const count = await blogRepository.count({ where: { title: title } });
+    return count > 0;
+  }
 }
 
 export default new BlogsService();

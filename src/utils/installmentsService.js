@@ -137,6 +137,14 @@ class InstallmentsService {
       return dueDate >= now && dueDate <= oneMonthFromNow;
     }).length;
   }
+
+  async existsByPolicyIdAndInstallmentNumber(policyId, installmentNumber) {
+    const installmentRepository = dataSource.getRepository(Installment);
+    const count = await installmentRepository.count({
+      where: { policy_id: policyId, installment_number: installmentNumber }
+    });
+    return count > 0;
+  }
 }
 
 export default new InstallmentsService();

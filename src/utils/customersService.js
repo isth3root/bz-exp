@@ -116,6 +116,12 @@ class CustomersService {
       .where('customer.full_name LIKE :name', { name: `%${name}%` })
       .getMany();
   }
+
+  async existsByNationalCode(nationalCode) {
+    const customerRepository = dataSource.getRepository(Customer);
+    const count = await customerRepository.count({ where: { national_code: nationalCode } });
+    return count > 0;
+  }
 }
 
 export default new CustomersService();

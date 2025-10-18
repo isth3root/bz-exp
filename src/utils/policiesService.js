@@ -368,6 +368,12 @@ class PoliciesService {
     }
     return allInstallments;
   }
+
+  async existsByPolicyNumber(policyNumber) {
+    const policyRepository = dataSource.getRepository(Policy);
+    const count = await policyRepository.count({ where: { policy_number: policyNumber } });
+    return count > 0;
+  }
 }
 
 export default new PoliciesService();

@@ -151,17 +151,41 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
       blogs: 0
     };
 
+    let skippedCount = {
+      customers: 0,
+      policies: 0,
+      installments: 0,
+      blogs: 0
+    };
+
+    let skippedDetails = {
+      customers: [],
+      policies: [],
+      installments: [],
+      blogs: []
+    };
+
     // Restore customers
     if (backup_data.customers && Array.isArray(backup_data.customers)) {
       console.log('👥 Restoring customers...');
       for (const customerData of backup_data.customers) {
         try {
+          // Check if customer already exists
+          const exists = await customersService.existsByNationalCode(customerData.national_code);
+          if (exists) {
+            skippedCount.customers++;
+            skippedDetails.customers.push(`Customer with national code ${customerData.national_code} already exists`);
+            continue;
+          }
+
           // Remove ID to avoid conflicts (let database generate new IDs)
           const { id, ...customerWithoutId } = customerData;
           await customersService.create(customerWithoutId);
           restoredCount.customers++;
         } catch (error) {
           console.error('Error restoring customer:', customerData.national_code, error);
+          skippedCount.customers++;
+          skippedDetails.customers.push(`Error restoring customer ${customerData.national_code}: ${error.message}`);
         }
       }
     }
@@ -171,11 +195,21 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
       console.log('📄 Restoring policies...');
       for (const policyData of backup_data.policies) {
         try {
+          // Check if policy already exists
+          const exists = await policiesService.existsByPolicyNumber(policyData.policy_number);
+          if (exists) {
+            skippedCount.policies++;
+            skippedDetails.policies.push(`Policy with number ${policyData.policy_number} already exists`);
+            continue;
+          }
+
           const { id, ...policyWithoutId } = policyData;
           await policiesService.create(policyWithoutId);
           restoredCount.policies++;
         } catch (error) {
           console.error('Error restoring policy:', policyData.policy_number, error);
+          skippedCount.policies++;
+          skippedDetails.policies.push(`Error restoring policy ${policyData.policy_number}: ${error.message}`);
         }
       }
     }
@@ -185,11 +219,21 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
       console.log('💰 Restoring installments...');
       for (const installmentData of backup_data.installments) {
         try {
+          // Check if installment already exists
+          const exists = await installmentsService.existsByPolicyIdAndInstallmentNumber(installmentData.policy_id, installmentData.installment_number);
+          if (exists) {
+            skippedCount.installments++;
+            skippedDetails.installments.push(`Installment ${installmentData.installment_number} for policy ${installmentData.policy_id} already exists`);
+            continue;
+          }
+
           const { id, ...installmentWithoutId } = installmentData;
           await installmentsService.create(installmentWithoutId);
           restoredCount.installments++;
         } catch (error) {
           console.error('Error restoring installment:', installmentData.id, error);
+          skippedCount.installments++;
+          skippedDetails.installments.push(`Error restoring installment ${installmentData.installment_number} for policy ${installmentData.policy_id}: ${error.message}`);
         }
       }
     }
@@ -199,20 +243,41 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
       console.log('📰 Restoring blogs...');
       for (const blogData of backup_data.blogs) {
         try {
+          // Check if blog already exists
+          const exists = await blogsService.existsByTitle(blogData.title);
+          if (exists) {
+            skippedCount.blogs++;
+            skippedDetails.blogs.push(`Blog with title "${blogData.title}" already exists`);
+            continue;
+          }
+
           const { id, ...blogWithoutId } = blogData;
           await blogsService.create(blogWithoutId);
           restoredCount.blogs++;
         } catch (error) {
           console.error('Error restoring blog:', blogData.title, error);
+          skippedCount.blogs++;
+          skippedDetails.blogs.push(`Error restoring blog "${blogData.title}": ${error.message}`);
         }
       }
     }
 
     console.log('✅ Database restore completed:', restoredCount);
+    console.log('⏭️  Skipped items:', skippedCount);
+
+    const totalRestored = Object.values(restoredCount).reduce((sum, count) => sum + count, 0);
+    const totalSkipped = Object.values(skippedCount).reduce((sum, count) => sum + count, 0);
+
+    let message = `Successfully added ${totalRestored} items to the database.`;
+    if (totalSkipped > 0) {
+      message += ` ${totalSkipped} items were skipped (duplicates or errors).`;
+    }
 
     res.json({
-      message: 'Database restored successfully',
+      message,
       restored: restoredCount,
+      skipped: skippedCount,
+      skippedDetails,
       timestamp: new Date().toISOString()
     });
 
