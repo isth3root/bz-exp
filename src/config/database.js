@@ -4,6 +4,7 @@ import Blog from '../models/Blog.js';
 import Customer from '../models/Customer.js';
 import Policy from '../models/Policy.js';
 import Installment from '../models/Installment.js';
+import ServerStatus from '../models/ServerStatus.js';
 
 const dataSource = new DataSource({
   type: 'mysql',
@@ -12,7 +13,7 @@ const dataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities: [Blog, Customer, Policy, Installment],
+  entities: [Blog, Customer, Policy, Installment, ServerStatus],
   synchronize: true,
 });
 

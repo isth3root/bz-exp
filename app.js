@@ -15,6 +15,7 @@ import blogsRoutes from './src/routes/blogs.js';
 import customersRoutes from './src/routes/customers.js';
 import installmentsRoutes from './src/routes/installments.js';
 import policiesRoutes from './src/routes/policies.js';
+import serverStatusRoutes from './src/routes/serverStatus.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +52,7 @@ app.use('/', blogsRoutes);
 app.use('/', customersRoutes);
 app.use('/', installmentsRoutes);
 app.use('/', policiesRoutes);
+app.use('/', serverStatusRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

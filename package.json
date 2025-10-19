@@ -28,6 +28,7 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "speakeasy": "^2.0.0",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.27",
+    "ws": "^8.18.3"
   }
 }
