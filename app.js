@@ -52,6 +52,11 @@ app.use('/', customersRoutes);
 app.use('/', installmentsRoutes);
 app.use('/', policiesRoutes);
 
+// Health check route
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Cron job to delete old PDFs
 cron.schedule('0 0 * * *', async () => {
   try {
