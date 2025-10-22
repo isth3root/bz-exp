@@ -117,6 +117,16 @@ class CustomersService {
       .getMany();
   }
 
+  async search(query) {
+    const customerRepository = dataSource.getRepository(Customer);
+    return customerRepository
+      .createQueryBuilder('customer')
+      .where('customer.full_name LIKE :query OR customer.national_code LIKE :query', {
+        query: `%${query}%`
+      })
+      .getMany();
+  }
+
   async existsByNationalCode(nationalCode) {
     const customerRepository = dataSource.getRepository(Customer);
     const count = await customerRepository.count({ where: { national_code: nationalCode } });

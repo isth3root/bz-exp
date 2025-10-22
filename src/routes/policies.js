@@ -48,9 +48,13 @@ router.get('/customer/policies', jwtAuth, async (req, res) => {
   }
 });
 
-router.put('/admin/policies/:id', jwtAuth, async (req, res) => {
+router.put('/admin/policies/:id', jwtAuth, upload.single('pdf'), async (req, res) => {
   try {
-    const updatedPolicy = await policiesService.update(req.params.id, req.body);
+    const policyData = { ...req.body };
+    if (req.file) {
+      policyData.pdf_path = `/uploads/policies/${req.file.filename}`;
+    }
+    const updatedPolicy = await policiesService.update(req.params.id, policyData);
     if (!updatedPolicy) return res.status(404).json({ message: 'Policy not found' });
     res.json(updatedPolicy);
   } catch (error) {

@@ -22,7 +22,13 @@ router.post('/admin/customers', jwtAuth, async (req, res) => {
 // GET ALL CUSTOMERS
 router.get('/admin/customers', jwtAuth, async (req, res) => {
   try {
-    const customers = await customersService.findAll();
+    const { search } = req.query;
+    let customers;
+    if (search && search.trim()) {
+      customers = await customersService.search(search.trim());
+    } else {
+      customers = await customersService.findAll();
+    }
     res.json(customers);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching customers' });
