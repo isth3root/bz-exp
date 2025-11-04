@@ -50,7 +50,12 @@ router.get('/customer/policies', jwtAuth, async (req, res) => {
 
 router.put('/admin/policies/:id', jwtAuth, upload.single('pdf'), async (req, res) => {
   try {
-    const policyData = { ...req.body };
+    const policyData = {
+      ...req.body,
+      premium: req.body.premium ? +(req.body.premium.replace(/,/g, '')) : undefined,
+      installment_count: req.body.installment_count ? +(req.body.installment_count) : undefined,
+      first_installment_amount: req.body.first_installment_amount ? +(req.body.first_installment_amount.replace(/,/g, '')) : undefined,
+    };
     if (req.file) {
       policyData.pdf_path = `/uploads/policies/${req.file.filename}`;
     }
@@ -58,6 +63,7 @@ router.put('/admin/policies/:id', jwtAuth, upload.single('pdf'), async (req, res
     if (!updatedPolicy) return res.status(404).json({ message: 'Policy not found' });
     res.json(updatedPolicy);
   } catch (error) {
+    console.error('Error updating policy:', error);
     res.status(500).json({ message: 'Error updating policy' });
   }
 });
