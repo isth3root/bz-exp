@@ -9,10 +9,10 @@ class CustomersService {
   }
 
   async findOne(id) {
-    console.log('Service findOne id:', id, typeof id);
+    // console.log('Service findOne id:', id, typeof id);
     const customerRepository = dataSource.getRepository(Customer);
     const result = await customerRepository.findOne({ where: { id: id } });
-    console.log('Service findOne result:', result);
+    // console.log('Service findOne result:', result);
     return result;
   }
 
@@ -23,7 +23,7 @@ class CustomersService {
   }
 
   async update(id, customer) {
-    console.log('Service update id:', id, 'customer:', customer);
+    // console.log('Service update id:', id, 'customer:', customer);
     const customerRepository = dataSource.getRepository(Customer);
     const policyRepository = dataSource.getRepository(Policy);
 
@@ -43,14 +43,14 @@ class CustomersService {
 
       // Update the customer
       await manager.update(Customer, id, customer);
-      console.log('Update result: success');
+      // console.log('Update result: success');
 
       return this.findOne(id);
     });
   }
 
   async remove(id) {
-    console.log('Service remove id:', id);
+    // console.log('Service remove id:', id);
     const customerRepository = dataSource.getRepository(Customer);
     const policyRepository = dataSource.getRepository(Policy);
 
@@ -70,7 +70,7 @@ class CustomersService {
 
     // Delete the customer
     const deleteResult = await customerRepository.delete(id);
-    console.log('Delete result:', deleteResult);
+    // console.log('Delete result:', deleteResult);
   }
 
   async removePolicyAndRelated(policyId) {
@@ -102,10 +102,10 @@ class CustomersService {
   }
 
   async findByNationalCode(nationalCode) {
-    console.log('Service findByNationalCode:', nationalCode);
+    // console.log('Service findByNationalCode:', nationalCode);
     const customerRepository = dataSource.getRepository(Customer);
     const result = await customerRepository.findOne({ where: { national_code: nationalCode } });
-    console.log('findByNationalCode result:', result);
+    // console.log('findByNationalCode result:', result);
     return result;
   }
 

@@ -8,9 +8,9 @@ import http from 'http';
 async function startServer() {
   try {
     await dataSource.initialize();
-    console.log('Database connected');
+    // console.log('Database connected');
   } catch (error) {
-    console.error('Database connection failed', error);
+    // console.error('Database connection failed', error);
   }
 
   const port = process.env.PORT;
@@ -25,16 +25,16 @@ async function startServer() {
   const clients = new Set();
 
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    // console.log('WebSocket client connected');
     clients.add(ws);
 
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+      // console.log('WebSocket client disconnected');
       clients.delete(ws);
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      // console.error('WebSocket error:', error);
       clients.delete(ws);
     });
   });
@@ -44,7 +44,7 @@ async function startServer() {
   global.wsClients = clients;
 
   server.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    // console.log(`Server running on port ${port}`);
   });
 }
 

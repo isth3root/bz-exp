@@ -81,7 +81,7 @@ class PoliciesService {
     return this.findByCustomerNationalCode(customer.national_code);
   }
 
-  async create(policy) {
+    async create(policy) {
     const policyRepository = dataSource.getRepository(Policy);
 
     // Calculate end_date if not provided
@@ -124,60 +124,129 @@ class PoliciesService {
 
     // Create installments if payment type is اقساطی
     if (policy.payment_type === 'اقساطی' && policy.installment_count && policy.installment_count > 0 && policyWithRelations.premium) {
-      let baseAmount, remainder, total, count;
-      if (policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount) {
-        total = policyWithRelations.premium - policy.first_installment_amount;
-        count = policy.installment_count - 1;
-        baseAmount = Math.floor(total / count);
-        remainder = total % count;
-      } else {
-        total = policyWithRelations.premium;
-        count = policy.installment_count;
-        baseAmount = Math.floor(total / count);
-        remainder = total % count;
-      }
+      // Normalize numbers
+      const totalPremium = Number(policyWithRelations.premium);
+      const installmentCount = Number(policy.installment_count);
+      const isPre = policy.installment_type === 'پیش پرداخت' && policy.first_installment_amount;
+      const firstAmount = isPre ? Number(policy.first_installment_amount) : 0;
 
-      let [sy, sm, sd] = policyWithRelations.start_date.split("/").map(Number);
-      if (!sy || !sm || !sd) throw new Error("Invalid start_date format")
-      if (sy < 1300) sy += 620;
+      // Edge: if only 1 installment and it's prepayment, handle separately
+      if (isPre && installmentCount === 1) {
+        // Only one installment which is the prepayment
+        // due date = month after start_date
+        let [sy, sm, sd] = policyWithRelations.start_date.split("/").map(Number);
+        if (!sy || !sm || !sd) throw new Error("Invalid start_date format");
+        if (sy < 1300) sy += 620;
 
-      for (let i = 0; i < policy.installment_count; i++) {
-        const monthsToAdd = policy.installment_type === 'پیش پرداخت' ? i : i + 1;
-        let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
+        const monthsToAdd = 1;
+        const { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
+        const due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
 
-        // due_date as Jalaali string
-        let due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
-
-        // Calculate status based on current date
         const now = new Date();
         const nowJalaali = jalaali.toJalaali(now);
-        let status = "آینده";
+        let statusItem = "آینده";
         if (y < nowJalaali.jy || (y === nowJalaali.jy && m < nowJalaali.jm) || (y === nowJalaali.jy && m === nowJalaali.jm && d < nowJalaali.jd)) {
-          status = "معوق";
-        }
-
-        // Calculate amount without decimals, add remainder to the last installment
-        let amount;
-        if (policy.installment_type === 'پیش پرداخت' && i === 0 && policy.first_installment_amount) {
-          amount = policy.first_installment_amount;
-        } else {
-          amount = baseAmount + (i === policy.installment_count - 1 ? remainder : 0);
+          statusItem = "معوق";
         }
 
         await installmentsService.create({
           customer_id: policyWithRelations.customer.id,
           policy_id: policyWithRelations.id,
-          installment_number: i + 1,
-          amount,
+          installment_number: 1,
+          amount: firstAmount,
           due_date,
-          status,
+          status: statusItem,
           pay_link: policyWithRelations.payment_link,
         });
+
+      } else {
+        // Compute division for remaining installments
+        let remainingTotal, remainingCount;
+        if (isPre) {
+          remainingTotal = totalPremium - firstAmount;
+          remainingCount = installmentCount - 1;
+        } else {
+          remainingTotal = totalPremium;
+          remainingCount = installmentCount;
+        }
+
+        if (remainingCount <= 0) {
+          // Nothing to create (shouldn't normally happen unless bad data)
+          return policyWithRelations;
+        }
+
+        const baseAmount = Math.floor(remainingTotal / remainingCount);
+        const remainder = remainingTotal % remainingCount;
+
+        // parse start date
+        let [sy, sm, sd] = policyWithRelations.start_date.split("/").map(Number);
+        if (!sy || !sm || !sd) throw new Error("Invalid start_date format");
+        if (sy < 1300) sy += 620;
+
+        // If prepayment: create first installment (installment_number = 1) with due_date = month after start_date
+        if (isPre) {
+          const monthsToAdd = 0;
+          const { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
+          const due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+
+          const now = new Date();
+          const nowJalaali = jalaali.toJalaali(now);
+          let statusItem = "آینده";
+          if (y < nowJalaali.jy || (y === nowJalaali.jy && m < nowJalaali.jm) || (y === nowJalaali.jy && m === nowJalaali.jm && d < nowJalaali.jd)) {
+            statusItem = "معوق";
+          }
+
+          await installmentsService.create({
+            customer_id: policyWithRelations.customer.id,
+            policy_id: policyWithRelations.id,
+            installment_number: 1,
+            amount: firstAmount,
+            due_date,
+            status: statusItem,
+            pay_link: policyWithRelations.payment_link,
+          });
+        }
+
+        // Create remaining installments
+        // remaining installments should be numbered  (isPre ? 2 : 1) ... installmentCount
+        const startNumber = isPre ? 2 : 1;
+        for (let k = 0; k < remainingCount; k++) {
+          const installmentNumber = startNumber + k;
+          let monthsToAdd;
+          if (isPre) {
+            monthsToAdd = installmentNumber - 1;
+          } else {
+            monthsToAdd = installmentNumber;
+          }
+          const { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
+          const due_date = `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+
+          const now = new Date();
+          const nowJalaali = jalaali.toJalaali(now);
+          let statusItem = "آینده";
+          if (y < nowJalaali.jy || (y === nowJalaali.jy && m < nowJalaali.jm) || (y === nowJalaali.jy && m === nowJalaali.jm && d < nowJalaali.jd)) {
+            statusItem = "معوق";
+          }
+
+          // amount: base + remainder on the last of remaining installments
+          const amount = baseAmount + (k === remainingCount - 1 ? remainder : 0);
+
+          await installmentsService.create({
+            customer_id: policyWithRelations.customer.id,
+            policy_id: policyWithRelations.id,
+            installment_number: installmentNumber,
+            amount,
+            due_date,
+            status: statusItem,
+            pay_link: policyWithRelations.payment_link,
+          });
+        }
       }
     }
 
-  return policyWithRelations;
-}
+    return policyWithRelations;
+  }
+
 
   async update(id, policy) {
     const policyRepository = dataSource.getRepository(Policy);
@@ -186,10 +255,10 @@ class PoliciesService {
     if (!oldPolicy) return null;
 
     // Check if fields that affect installments have changed
-    const premiumChanged = policy.premium !== undefined && parseFloat(policy.premium) !== parseFloat(oldPolicy.premium);
-    const countChanged = policy.installment_count !== undefined && parseInt(policy.installment_count) !== parseInt(oldPolicy.installment_count);
+    const premiumChanged = policy.premium !== undefined && Number(policy.premium) !== Number(oldPolicy.premium);
+    const countChanged = policy.installment_count !== undefined && Number(policy.installment_count) !== Number(oldPolicy.installment_count);
     const typeChanged = policy.installment_type !== undefined && policy.installment_type !== oldPolicy.installment_type;
-    const firstAmountChanged = policy.first_installment_amount !== undefined && parseFloat(policy.first_installment_amount || 0) !== parseFloat(oldPolicy.first_installment_amount || 0);
+    const firstAmountChanged = policy.first_installment_amount !== undefined && Number(policy.first_installment_amount || 0) !== Number(oldPolicy.first_installment_amount || 0);
 
     const needsRecalculation = premiumChanged || countChanged || typeChanged || firstAmountChanged;
 
@@ -311,7 +380,7 @@ class PoliciesService {
     return allInstallments;
   }
 
-  async recalculateInstallments(policy) {
+    async recalculateInstallments(policy) {
     const installmentRepository = dataSource.getRepository(Installment);
 
     // Get existing installments for this policy
@@ -370,7 +439,7 @@ class PoliciesService {
 
     // Recreate installments starting from the next number after paid ones
     const startInstallmentNumber = paidInstallments.length + 1;
-    const numInstallmentsToCreate = Math.min(count, policy.installment_count - paidInstallments.length);
+    const numInstallmentsToCreate = count;
 
     if (numInstallmentsToCreate <= 0) return;
 
@@ -380,7 +449,8 @@ class PoliciesService {
 
     for (let i = 0; i < numInstallmentsToCreate; i++) {
       const installmentNumber = startInstallmentNumber + i;
-      const monthsToAdd = policy.installment_type === 'پیش پرداخت' ? installmentNumber - 1 : installmentNumber;
+      // monthsToAdd: installmentNumber months after start_date (so installment 1 => +1 month)
+      const monthsToAdd = installmentNumber;
       let { y, m, d } = addJalaaliMonth({ y: sy, m: sm, d: sd }, monthsToAdd);
 
       // due_date as Jalaali string
@@ -396,10 +466,14 @@ class PoliciesService {
 
       // Calculate amount
       let amount;
-      if (policy.installment_type === 'پیش پرداخت' && installmentNumber === 1 && policy.first_installment_amount) {
-        amount = policy.first_installment_amount;
+      // If prepayment and this is installment 1 (and first not paid), set first amount
+      if (policy.installment_type === 'پیش پرداخت' && installmentNumber === 1 && policy.first_installment_amount && !firstInstallmentPaid) {
+        amount = Number(policy.first_installment_amount);
       } else {
-        amount = baseAmount + (i === numInstallmentsToCreate - 1 ? remainder : 0);
+        // i indexes newly created installments (0..numInstallmentsToCreate-1)
+        // but remainder should be applied to the last of the created ones:
+        const indexAmongCreated = i;
+        amount = baseAmount + (indexAmongCreated === numInstallmentsToCreate - 1 ? remainder : 0);
       }
 
       await installmentsService.create({
@@ -413,6 +487,7 @@ class PoliciesService {
       });
     }
   }
+
 
   async existsByPolicyNumber(policyNumber) {
     const policyRepository = dataSource.getRepository(Policy);

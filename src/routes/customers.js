@@ -102,7 +102,7 @@ router.post('/admin/backup', jwtAuth, async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="backup.json"');
     res.send(jsonData);
   } catch (error) {
-    console.error('Error creating backup:', error);
+    // console.error('Error creating backup:', error);
     res.status(500).json({ message: 'Error creating backup' });
   }
 });
@@ -143,7 +143,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
       return res.status(400).json({ message: 'Backup data is required' });
     }
 
-    console.log('🔄 Starting database restore...');
+    // console.log('🔄 Starting database restore...');
 
     const customersService = (await import('../utils/customersService.js')).default;
     const policiesService = (await import('../utils/policiesService.js')).default;
@@ -173,7 +173,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
 
     // Restore customers
     if (backup_data.customers && Array.isArray(backup_data.customers)) {
-      console.log('👥 Restoring customers...');
+      // console.log('👥 Restoring customers...');
       for (const customerData of backup_data.customers) {
         try {
           // Check if customer already exists
@@ -189,7 +189,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
           await customersService.create(customerWithoutId);
           restoredCount.customers++;
         } catch (error) {
-          console.error('Error restoring customer:', customerData.national_code, error);
+          // console.error('Error restoring customer:', customerData.national_code, error);
           skippedCount.customers++;
           skippedDetails.customers.push(`Error restoring customer ${customerData.national_code}: ${error.message}`);
         }
@@ -198,7 +198,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
 
     // Restore policies
     if (backup_data.policies && Array.isArray(backup_data.policies)) {
-      console.log('📄 Restoring policies...');
+      // console.log('📄 Restoring policies...');
       for (const policyData of backup_data.policies) {
         try {
           // Check if policy already exists
@@ -213,7 +213,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
           await policiesService.create(policyWithoutId);
           restoredCount.policies++;
         } catch (error) {
-          console.error('Error restoring policy:', policyData.policy_number, error);
+          // console.error('Error restoring policy:', policyData.policy_number, error);
           skippedCount.policies++;
           skippedDetails.policies.push(`Error restoring policy ${policyData.policy_number}: ${error.message}`);
         }
@@ -222,7 +222,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
 
     // Restore installments
     if (backup_data.installments && Array.isArray(backup_data.installments)) {
-      console.log('💰 Restoring installments...');
+      // console.log('💰 Restoring installments...');
       for (const installmentData of backup_data.installments) {
         try {
           // Check if installment already exists
@@ -237,7 +237,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
           await installmentsService.create(installmentWithoutId);
           restoredCount.installments++;
         } catch (error) {
-          console.error('Error restoring installment:', installmentData.id, error);
+          // console.error('Error restoring installment:', installmentData.id, error);
           skippedCount.installments++;
           skippedDetails.installments.push(`Error restoring installment ${installmentData.installment_number} for policy ${installmentData.policy_id}: ${error.message}`);
         }
@@ -246,7 +246,7 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
 
     // Restore blogs
     if (backup_data.blogs && Array.isArray(backup_data.blogs)) {
-      console.log('📰 Restoring blogs...');
+      // console.log('📰 Restoring blogs...');
       for (const blogData of backup_data.blogs) {
         try {
           // Check if blog already exists
@@ -261,15 +261,15 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
           await blogsService.create(blogWithoutId);
           restoredCount.blogs++;
         } catch (error) {
-          console.error('Error restoring blog:', blogData.title, error);
+          // console.error('Error restoring blog:', blogData.title, error);
           skippedCount.blogs++;
           skippedDetails.blogs.push(`Error restoring blog "${blogData.title}": ${error.message}`);
         }
       }
     }
 
-    console.log('✅ Database restore completed:', restoredCount);
-    console.log('⏭️  Skipped items:', skippedCount);
+    // console.log('✅ Database restore completed:', restoredCount);
+    // console.log('⏭️  Skipped items:', skippedCount);
 
     const totalRestored = Object.values(restoredCount).reduce((sum, count) => sum + count, 0);
     const totalSkipped = Object.values(skippedCount).reduce((sum, count) => sum + count, 0);
@@ -288,69 +288,69 @@ router.post('/admin/restore', jwtAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error during database restore:', error);
+    // console.error('❌ Error during database restore:', error);
     res.status(500).json({ message: 'Error restoring database' });
   }
 });
 
 // GET CUSTOMER BY NATIONAL ID
 router.get('/admin/customers/by-national/:nationalCode', jwtAuth, async (req, res) => {
-  console.log('Get by national route hit, nationalCode:', req.params.nationalCode);
+  // console.log('Get by national route hit, nationalCode:', req.params.nationalCode);
   try {
-    console.log('Fetching customer by national code:', req.params.nationalCode);
+    // console.log('Fetching customer by national code:', req.params.nationalCode);
     const customer = await customersService.findByNationalCode(req.params.nationalCode);
-    console.log('Customer found:', customer);
+    // console.log('Customer found:', customer);
     if (!customer) return res.status(404).json({ message: 'Customer not found' });
     res.json(customer);
   } catch (error) {
-    console.error('Error fetching customer by national code:', error);
+    // console.error('Error fetching customer by national code:', error);
     res.status(500).json({ message: 'Error fetching customer' });
   }
 });
 
 // GET SINGLE CUSTOMER
 router.get('/admin/customers/:id', jwtAuth, async (req, res) => {
-  console.log('Get single customer route hit, id:', req.params.id);
+  // console.log('Get single customer route hit, id:', req.params.id);
   try {
     const id = parseInt(req.params.id);
-    console.log('Fetching customer id:', id);
+    // console.log('Fetching customer id:', id);
     const customer = await customersService.findOne(id);
-    console.log('Customer:', customer);
+    // console.log('Customer:', customer);
     if (!customer) return res.status(404).json({ message: 'Customer not found' });
     res.json(customer);
   } catch (error) {
-    console.error('Error fetching customer:', error);
+    // console.error('Error fetching customer:', error);
     res.status(500).json({ message: 'Error fetching customer' });
   }
 });
 
 // UPDATE CUSTOMER
 router.put('/admin/customers/:id', jwtAuth, async (req, res) => {
-  console.log('Update customer route hit, id:', req.params.id);
+  // console.log('Update customer route hit, id:', req.params.id);
   try {
     const id = parseInt(req.params.id);
-    console.log('Updating customer id:', id, 'body:', req.body);
+    // console.log('Updating customer id:', id, 'body:', req.body);
     const updatedCustomer = await customersService.update(id, req.body);
-    console.log('Updated customer:', updatedCustomer);
+    // console.log('Updated customer:', updatedCustomer);
     if (!updatedCustomer) return res.status(404).json({ message: 'Customer not found' });
     res.json(updatedCustomer);
   } catch (error) {
-    console.error('Error updating customer:', error);
+    // console.error('Error updating customer:', error);
     res.status(500).json({ message: 'Error updating customer' });
   }
 });
 
 // DELETE CUSTOMER
 router.delete('/admin/customers/:id', jwtAuth, async (req, res) => {
-  console.log('Delete customer route hit, id:', req.params.id);
+  // console.log('Delete customer route hit, id:', req.params.id);
   try {
     const id = parseInt(req.params.id);
-    console.log('Deleting customer id:', id);
+    // console.log('Deleting customer id:', id);
     await customersService.remove(id);
-    console.log('Customer deleted');
+    // console.log('Customer deleted');
     res.json({ message: 'Customer deleted' });
   } catch (error) {
-    console.error('Error deleting customer:', error);
+    // console.error('Error deleting customer:', error);
     res.status(500).json({ message: 'Error deleting customer' });
   }
 });

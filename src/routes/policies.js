@@ -34,7 +34,7 @@ router.post('/admin/policies', jwtAuth, upload.single('pdf'), async (req, res) =
     const newPolicy = await policiesService.create(policy);
     res.json(newPolicy);
   } catch (error) {
-    console.error("Error creating policy", error)
+    // console.error("Error creating policy", error)
     res.status(500).json({ message: 'Error creating policy' });
   }
 });
@@ -63,7 +63,7 @@ router.put('/admin/policies/:id', jwtAuth, upload.single('pdf'), async (req, res
     if (!updatedPolicy) return res.status(404).json({ message: 'Policy not found' });
     res.json(updatedPolicy);
   } catch (error) {
-    console.error('Error updating policy:', error);
+    // console.error('Error updating policy:', error);
     res.status(500).json({ message: 'Error updating policy' });
   }
 });

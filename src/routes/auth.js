@@ -24,7 +24,7 @@ router.post('/login', localAuth, async (req, res) => {
         req.user.two_factor_secret = secret.base32;
         const customerRepository = dataSource.getRepository(Customer);
         await customerRepository.save(req.user);
-        console.log('2FA Secret generated for admin:', secret.otpauth_url);
+        // console.log('2FA Secret generated for admin:', secret.otpauth_url);
         return res.json({
           requires_setup: true,
           secret: secret.base32,
@@ -47,8 +47,8 @@ router.post('/login', localAuth, async (req, res) => {
     const result = await authService.login(req.user);
     res.cookie('token', result.access_token, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: false,
+      sameSite: 'lax',
       maxAge: req.user.role === 'admin' ? 15 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000,
     });
     res.json({ username: req.user.national_code, role: req.user.role });
@@ -79,7 +79,7 @@ router.post('/generate-2fa', jwtAuth, async (req, res) => {
     customer.two_factor_secret = secret.base32;
     await customerRepository.save(customer);
 
-    console.log('2FA Secret for admin:', secret.otpauth_url);
+    // console.log('2FA Secret for admin:', secret.otpauth_url);
 
     res.json({
       secret: secret.base32,
@@ -117,8 +117,8 @@ router.post('/verify-2fa', async (req, res) => {
     const result = await authService.login(customer);
     res.cookie('token', result.access_token, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: false,
+      sameSite: 'lax',
       maxAge: customer.role === 'admin' ? 15 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000,
     });
     res.json({ username: customer.national_code, role: customer.role });
@@ -128,7 +128,7 @@ router.post('/verify-2fa', async (req, res) => {
 });
 
 router.get('/verify', jwtAuth, (req, res) => {
-  console.log('✅ Auth verify SUCCESS - user:', req.user);
+  // console.log('✅ Auth verify SUCCESS - user:', req.user);
   res.json({
     authenticated: true,
     user: {

@@ -45,7 +45,7 @@ router.post('/server-status', async (req, res) => {
 
     res.status(201).json({ message: 'Server status saved successfully' });
   } catch (error) {
-    console.error('Error saving server status:', error);
+    // console.error('Error saving server status:', error);
     res.status(500).json({ message: 'Error saving server status' });
   }
 });
@@ -60,7 +60,7 @@ router.get('/server-status', async (req, res) => {
     });
     res.json(statuses);
   } catch (error) {
-    console.error('Error fetching server status:', error);
+    // console.error('Error fetching server status:', error);
     res.status(500).json({ message: 'Error fetching server status' });
   }
 });
